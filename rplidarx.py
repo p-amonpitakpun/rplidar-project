@@ -75,14 +75,35 @@ if __name__ == '__main__':
                 cPoints = list(map(cvtPolarToCartesian, polarPoints))
 
                 try:
-                    pointMat = np.zeros((WIDTH, HEIGHT, 3))
+                    srcMat = np.zeros((WIDTH, HEIGHT, 3), dtype="uint8")
                     matPoints = list(map(mapPointToMat, cPoints))
                     for center in matPoints:
-                        cv.circle(pointMat, center, 1, (0, 0, 255), -1)
+                        cv.circle(srcMat, center, 2, (255, 255, 255), -1)
 
-                    cv.imshow(pointWindowName, pointMat)
+                    kernel = np.ones((5, 5), np.uint8)
+                    dstMat = srcMat.copy()
+                    # dstMat = cv.erode(dstMat, kernel, iterations=1)
+
+                    gray = cv.cvtColor(dstMat, cv.COLOR_BGR2GRAY)
+                    contours, hierarchy = cv.findContours(
+                        gray, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+                    cnt = np.array(matPoints)
+                    cv.drawContours(dstMat, [cnt], -1, (0, 0, 255), 1)
+
+                    hull = cv.convexHull(cnt, returnPoints=False)
+                    defects = cv.convexityDefects(cnt, hull)
+                    for i in range(defects.shape[0]):
+                        s, e, f, d = defects[i, 0]
+                        far = tuple(cnt[f])
+                        if d > 10000:
+                            cv.circle(dstMat, far, 5, (0, 255, 125), -1)
+
+                    cv.imshow(pointWindowName, dstMat)
+
                 except Exception as e:
                     print(e)
+                    break
                 if cv.waitKey(10) > -1:
                     break
         except Exception as e:
