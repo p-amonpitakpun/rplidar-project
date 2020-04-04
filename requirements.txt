@@ -1,0 +1,12 @@
+# formatter
+pylint
+yapf
+
+# enviroment variables
+python-dotenv
+
+# modules
+numpy
+matplotlib
+rplidar
+opencv-python
