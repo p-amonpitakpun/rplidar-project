@@ -47,7 +47,7 @@ def mapPointToMat(point):
 if __name__ == '__main__':
     lidar = None
     try:
-        lidar = RPLidar(RPLIDAR_PORT)
+        lidar = RPLidar(RPLIDAR_PORT, baudrate=115200)
     except Exception as e:
         print(e)
     if lidar:
@@ -60,17 +60,20 @@ if __name__ == '__main__':
             health = lidar.get_health()
             print(health)
 
-            lidar.set_pwm(MAX_MOTOR_PWM)
+            lidar.set_pwm(MAX_MOTOR_PWM * 2 // 3)
 
             pointWindowName = "POINTS"
             cv.namedWindow(pointWindowName)
+
+            average_time = 0
+            n_time = 0
 
             time.sleep(5)
             t = time.time()  # start time
             # scan (quality, angle, distance)
             #degree, mm
-            for i, scan in enumerate(lidar.iter_scans(max_buf_meas=1000)):
-                # print('%d: Got %d measurments' % (i, len(scan)))
+            for i, scan in enumerate(lidar.iter_scans(max_buf_meas=2**9, min_len=100)):
+                start_time = time.time()
                 polarPoints = limitPolarPoints(scan)
                 cPoints = list(map(cvtPolarToCartesian, polarPoints))
 
@@ -91,6 +94,8 @@ if __name__ == '__main__':
                     cnt = np.array(matPoints)
                     cv.drawContours(dstMat, [cnt], -1, (0, 0, 255), 1)
 
+                    hull = cv.convexHull(cnt)
+                    cv.drawContours(dstMat, [hull], -1, (255, 0, 0), 1)
                     hull = cv.convexHull(cnt, returnPoints=False)
                     defects = cv.convexityDefects(cnt, hull)
                     for i in range(defects.shape[0]):
@@ -98,13 +103,17 @@ if __name__ == '__main__':
                         far = tuple(cnt[f])
                         if d > 10000:
                             cv.circle(dstMat, far, 5, (0, 255, 125), -1)
-
                     cv.imshow(pointWindowName, dstMat)
-
                 except Exception as e:
                     print(e)
                     break
-                if cv.waitKey(10) > -1:
+                end_time = time.time()
+                elapsed_time = (end_time - start_time) * 10**3
+                average_time = (average_time * n_time + elapsed_time) / (n_time + 1)
+                n_time += 1
+                et_str = str(elapsed_time)[:str(elapsed_time).find('.') + 4]
+                print(i, ': Got', len(scan), 'measurments', et_str, 'ms elasped')
+                if cv.waitKey(1) > -1:
                     break
         except Exception as e:
             print("error")
@@ -113,5 +122,8 @@ if __name__ == '__main__':
         lidar.stop()
         lidar.stop_motor()
         lidar.disconnect()
-
+    
     cv.destroyAllWindows()
+
+    print("average elapsed time =", average_time, "ms")
+

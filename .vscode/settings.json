@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\nutpa\\Anaconda3\\envs\\rplidar\\python.exe",
+    "python.pythonPath": "C:\\Users\\user\\Anaconda3\\python.exe",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "python.formatting.provider": "yapf"
