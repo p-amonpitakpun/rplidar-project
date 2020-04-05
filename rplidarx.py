@@ -6,7 +6,11 @@ import numpy as np
 import cv2 as cv
 
 from rplidar import RPLidar, RPLidarException, MAX_MOTOR_PWM
-from setting import RPLIDAR_PORT
+from setting import RPLIDAR_PORT,BAUDRATE
+
+MOTOR_PWM = MAX_MOTOR_PWM // 4 
+MAX_BUFF = 500
+MIN_LEN = 10
 
 WIDTH = 1000
 HEIGHT = 1000
@@ -18,6 +22,8 @@ Y_MAX = 5000
 
 RATIO_X = WIDTH / (X_MAX * 2)
 RATIO_Y = HEIGHT / (Y_MAX * 2)
+
+pointWindowName = "POINTS"
 
 
 def limitPolarPoints(scanPoints):
@@ -43,11 +49,32 @@ def mapPointToMat(point):
     return (int(np.round(point[0] * RATIO_X) + X_CENTER),
             int(np.round(point[1] * RATIO_Y) + Y_CENTER))
 
+def process(cPoints):
+    srcMat = np.zeros((WIDTH, HEIGHT, 3), dtype="uint8")
+    matPoints = list(map(mapPointToMat, cPoints))
+    for center in matPoints:
+        cv.circle(srcMat, center, 2, (255, 255, 255), -1)
+    dstMat = srcMat.copy()
+
+    cnt = np.array(matPoints)
+    cv.drawContours(dstMat, [cnt], -1, (0, 0, 255), 1)
+
+    hull = cv.convexHull(cnt)
+    cv.drawContours(dstMat, [hull], -1, (255, 0, 0), 1)
+    hull = cv.convexHull(cnt, returnPoints=False)
+    defects = cv.convexityDefects(cnt, hull)
+    for i in range(defects.shape[0]):
+        _, _, f, d = defects[i, 0]
+        far = tuple(cnt[f])
+        if d > 10000:
+            cv.circle(dstMat, far, 5, (0, 255, 125), -1)
+    cv.imshow(pointWindowName, dstMat)
+
 
 if __name__ == '__main__':
     lidar = None
-    try:
-        lidar = RPLidar(RPLIDAR_PORT, baudrate=115200)
+    try:f
+        lidar = RPLidar(RPLIDAR_PORT, baudrate=BAUDRATE)
     except Exception as e:
         print(e)
     if lidar:
@@ -60,9 +87,8 @@ if __name__ == '__main__':
             health = lidar.get_health()
             print(health)
 
-            lidar.set_pwm(MAX_MOTOR_PWM * 2 // 3)
+            lidar.set_pwm(MOTOR_PWM)
 
-            pointWindowName = "POINTS"
             cv.namedWindow(pointWindowName)
 
             average_time = 0
@@ -72,38 +98,13 @@ if __name__ == '__main__':
             t = time.time()  # start time
             # scan (quality, angle, distance)
             #degree, mm
-            for i, scan in enumerate(lidar.iter_scans(max_buf_meas=2**9, min_len=100)):
+            for i, scan in enumerate(lidar.iter_scans(max_buf_meas=500, min_len=10)):
                 start_time = time.time()
                 polarPoints = limitPolarPoints(scan)
                 cPoints = list(map(cvtPolarToCartesian, polarPoints))
 
                 try:
-                    srcMat = np.zeros((WIDTH, HEIGHT, 3), dtype="uint8")
-                    matPoints = list(map(mapPointToMat, cPoints))
-                    for center in matPoints:
-                        cv.circle(srcMat, center, 2, (255, 255, 255), -1)
-
-                    kernel = np.ones((5, 5), np.uint8)
-                    dstMat = srcMat.copy()
-                    # dstMat = cv.erode(dstMat, kernel, iterations=1)
-
-                    gray = cv.cvtColor(dstMat, cv.COLOR_BGR2GRAY)
-                    contours, hierarchy = cv.findContours(
-                        gray, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
-                    cnt = np.array(matPoints)
-                    cv.drawContours(dstMat, [cnt], -1, (0, 0, 255), 1)
-
-                    hull = cv.convexHull(cnt)
-                    cv.drawContours(dstMat, [hull], -1, (255, 0, 0), 1)
-                    hull = cv.convexHull(cnt, returnPoints=False)
-                    defects = cv.convexityDefects(cnt, hull)
-                    for i in range(defects.shape[0]):
-                        s, e, f, d = defects[i, 0]
-                        far = tuple(cnt[f])
-                        if d > 10000:
-                            cv.circle(dstMat, far, 5, (0, 255, 125), -1)
-                    cv.imshow(pointWindowName, dstMat)
+                    process(cPoints)
                 except Exception as e:
                     print(e)
                     break
@@ -113,7 +114,7 @@ if __name__ == '__main__':
                 n_time += 1
                 et_str = str(elapsed_time)[:str(elapsed_time).find('.') + 4]
                 print(i, ': Got', len(scan), 'measurments', et_str, 'ms elasped')
-                if cv.waitKey(1) > -1:
+                if cv.waitKey(10) > -1:
                     break
         except Exception as e:
             print("error")
