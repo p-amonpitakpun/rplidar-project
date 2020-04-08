@@ -57,7 +57,7 @@ def process(cPoints):
     dstMat = srcMat.copy()
 
     cnt = np.array(matPoints)
-    cv.drawContours(dstMat, [cnt], -1, (0, 0, 255), 1)
+    cv.drawContours(dstMat, [cnt], -1, (255, 255, 255), 1)
 
     hull = cv.convexHull(cnt)
     cv.drawContours(dstMat, [hull], -1, (255, 0, 0), 1)
@@ -71,10 +71,10 @@ def process(cPoints):
     cv.imshow(pointWindowName, dstMat)
 
 
-if __name__ == '__main__':
+def run_RPLidar(port, baudrate, dat, config):
     lidar = None
-    try:f
-        lidar = RPLidar(RPLIDAR_PORT, baudrate=BAUDRATE)
+    try:
+        lidar = RPLidar(port, baudrate=baudrate)
     except Exception as e:
         print(e)
     if lidar:
@@ -113,7 +113,7 @@ if __name__ == '__main__':
                 average_time = (average_time * n_time + elapsed_time) / (n_time + 1)
                 n_time += 1
                 et_str = str(elapsed_time)[:str(elapsed_time).find('.') + 4]
-                print(i, ': Got', len(scan), 'measurments', et_str, 'ms elasped')
+                # print(i, ': Got', len(scan), 'measurments', et_str, 'ms elasped')
                 if cv.waitKey(10) > -1:
                     break
         except Exception as e:
@@ -128,3 +128,5 @@ if __name__ == '__main__':
 
     print("average elapsed time =", average_time, "ms")
 
+if __name__=='__main__':
+    run_RPLidar(RPLIDAR_PORT, BAUDRATE, None, None)

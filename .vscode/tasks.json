@@ -14,13 +14,21 @@
             "command": "conda activate rplidar; pip install -r requirements.txt"
         },
         {
-            "label": "Python: run",
+            "label": "Python: run multiprocess",
             "type": "shell",
-            "command": "conda activate rplidar; python rplidarx.py",
+            "command": "conda activate rplidar; python human_detect.py",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "Python: run standalone.py",
+            "type": "shell",
+            "command": "conda activate rplidar; python standalone.py",
             "presentation": {
                 "clear": true
             }
