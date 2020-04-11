@@ -4,11 +4,12 @@ import math
 import time
 import numpy as np
 import cv2 as cv
+import json
 
 from rplidar import RPLidar, RPLidarException, MAX_MOTOR_PWM
-from setting import RPLIDAR_PORT,BAUDRATE
+from setting import RPLIDAR_PORT, BAUDRATE
 
-MOTOR_PWM = MAX_MOTOR_PWM // 4 
+MOTOR_PWM = MAX_MOTOR_PWM // 4
 MAX_BUFF = 500
 MIN_LEN = 10
 
@@ -48,6 +49,7 @@ def cvtPolarToCartesian(polarPoint):
 def mapPointToMat(point):
     return (int(np.round(point[0] * RATIO_X) + X_CENTER),
             int(np.round(point[1] * RATIO_Y) + Y_CENTER))
+
 
 def process(cPoints):
     srcMat = np.zeros((WIDTH, HEIGHT, 3), dtype="uint8")
@@ -98,19 +100,23 @@ def run_RPLidar(port, baudrate, dat, config):
             t = time.time()  # start time
             # scan (quality, angle, distance)
             #degree, mm
-            for i, scan in enumerate(lidar.iter_scans(max_buf_meas=500, min_len=10)):
+            for i, scan in enumerate(
+                    lidar.iter_scans(max_buf_meas=500, min_len=10)):
                 start_time = time.time()
                 polarPoints = limitPolarPoints(scan)
                 cPoints = list(map(cvtPolarToCartesian, polarPoints))
 
                 try:
                     process(cPoints)
+                    with open('./out/scan.json', 'w') as scanfile:
+                        json.dump(cPoints, scanfile)
                 except Exception as e:
                     print(e)
                     break
                 end_time = time.time()
                 elapsed_time = (end_time - start_time) * 10**3
-                average_time = (average_time * n_time + elapsed_time) / (n_time + 1)
+                average_time = (average_time * n_time +
+                                elapsed_time) / (n_time + 1)
                 n_time += 1
                 et_str = str(elapsed_time)[:str(elapsed_time).find('.') + 4]
                 # print(i, ': Got', len(scan), 'measurments', et_str, 'ms elasped')
@@ -123,10 +129,11 @@ def run_RPLidar(port, baudrate, dat, config):
         lidar.stop()
         lidar.stop_motor()
         lidar.disconnect()
-    
+
     cv.destroyAllWindows()
 
     print("average elapsed time =", average_time, "ms")
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     run_RPLidar(RPLIDAR_PORT, BAUDRATE, None, None)

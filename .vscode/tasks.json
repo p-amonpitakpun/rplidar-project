@@ -16,7 +16,7 @@
         {
             "label": "Python: run multiprocess",
             "type": "shell",
-            "command": "conda activate rplidar; python human_detect.py",
+            "command": "conda activate rplidar; yapf -ir . --style pep8 -vv; python human_detect.py",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -28,7 +28,15 @@
         {
             "label": "Python: run standalone.py",
             "type": "shell",
-            "command": "conda activate rplidar; python standalone.py",
+            "command": "conda activate rplidar; yapf -ir . --style pep8 -vv; python standalone.py",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "Python: format",
+            "type": "shell",
+            "command": "yapf -ir . --style pep8 -vv",
             "presentation": {
                 "clear": true
             }

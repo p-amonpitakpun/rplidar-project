@@ -60,7 +60,8 @@ def run_RPLidar(port, baudrate, dat, config):
             # scan (quality, angle, distance)
             #degree, mm
             print("begin scan")
-            for i, scan in enumerate(lidar.iter_scans(max_buf_meas=bufflen, min_len=MIN_LEN)):
+            for i, scan in enumerate(
+                    lidar.iter_scans(max_buf_meas=bufflen, min_len=MIN_LEN)):
                 start_time = time.time()
                 polarPoints = limitPolarPoints(scan)
                 cPoints = list(map(cvtPolarToCartesian, polarPoints))
@@ -69,7 +70,8 @@ def run_RPLidar(port, baudrate, dat, config):
                 dat['p'] = cPoints
                 end_time = time.time()
                 elapsed_time = (end_time - start_time) * 10**3
-                average_time = (average_time * n_time + elapsed_time) / (n_time + 1)
+                average_time = (average_time * n_time +
+                                elapsed_time) / (n_time + 1)
                 n_time += 1
                 # et_str = str(elapsed_time)[:str(elapsed_time).find('.') + 4]
                 # print(i, ': Got', len(scan), 'measurments', et_str, 'ms elasped')
@@ -79,6 +81,8 @@ def run_RPLidar(port, baudrate, dat, config):
         except Exception as e:
             print("error")
             print(e)
+            if e.__str__() == 'Wrong body size':
+                config['err'] = 1
         finally:
             lidar.stop()
             lidar.stop_motor()

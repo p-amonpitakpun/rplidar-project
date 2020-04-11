@@ -41,10 +41,12 @@ def mapPointToMat(point):
     return (int(np.round(point[0] * RATIO_X) + X_CENTER),
             int(np.round(point[1] * RATIO_Y) + Y_CENTER))
 
+
 def findDistant(pointA, pointB):
     pointA = np.array(pointA)
     pointB = np.array(pointB)
     return np.sqrt(np.sum(np.power(pointA - pointB, 2)))
+
 
 def detectConvex(cPoints, prvCnt):
     srcMat = np.zeros((WIDTH, HEIGHT, 3), dtype="uint8")
@@ -71,7 +73,8 @@ def detectConvex(cPoints, prvCnt):
         area = cv.contourArea(approx[s:e + 1])
         if area > 4000:
             cv.circle(dstMat, far, 5, (0, 255, 255), -1)
-            cv.putText(dstMat, str(far), far, 0, 0.5, (255, 255, 0))
+            cv.putText(dstMat,
+                       str(e - s) + ',' + str(far), far, 0, 0.5, (255, 255, 0))
     return dstMat, cnt
 
 
@@ -89,6 +92,7 @@ def run_pointprocess(dat, config):
             except Exception as e:
                 print(e)
                 break
-            if cv.waitKey(10) > -1:
+            if cv.waitKey(20) > -1 or config.get('err') == 1:
                 break
     cv.destroyAllWindows()
+    print('end presentation')
