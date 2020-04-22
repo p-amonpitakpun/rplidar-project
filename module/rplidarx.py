@@ -17,7 +17,7 @@ def limitPolarPoints(scanPoints):
     new_points = []
     for point in scanPoints:
         _, degree, distance = point
-        if degree >= LOWER_DEGREE_LIMIT and degree <= UPPER_DEGREE_LIMIT and distance >= LOWER_DISTANT_LIMIT:
+        if LOWER_DEGREE_LIMIT <= degree <= UPPER_DEGREE_LIMIT and distance >= LOWER_DISTANT_LIMIT:
             new_points.append((degree, distance))
     return new_points
 

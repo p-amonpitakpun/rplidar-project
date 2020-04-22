@@ -52,25 +52,25 @@ def mapPointToMat(point):
 
 
 def process(cPoints):
-    srcMat = np.zeros((WIDTH, HEIGHT, 3), dtype="uint8")
-    matPoints = list(map(mapPointToMat, cPoints))
-    for center in matPoints:
-        cv.circle(srcMat, center, 2, (255, 255, 255), -1)
-    dstMat = srcMat.copy()
+    src = np.zeros((WIDTH, HEIGHT, 3), dtype="uint8")
+    mat_points = list(map(mapPointToMat, cPoints))
+    for center in mat_points:
+        cv.circle(src, center, 2, (255, 255, 255), -1)
+    dst = src.copy()
 
-    cnt = np.array(matPoints)
-    cv.drawContours(dstMat, [cnt], -1, (255, 255, 255), 1)
+    cnt = np.array(mat_points)
+    cv.drawContours(dst, [cnt], -1, (255, 255, 255), 1)
 
     hull = cv.convexHull(cnt)
-    cv.drawContours(dstMat, [hull], -1, (255, 0, 0), 1)
+    cv.drawContours(dst, [hull], -1, (255, 0, 0), 1)
     hull = cv.convexHull(cnt, returnPoints=False)
     defects = cv.convexityDefects(cnt, hull)
     for i in range(defects.shape[0]):
         _, _, f, d = defects[i, 0]
         far = tuple(cnt[f])
         if d > 10000:
-            cv.circle(dstMat, far, 5, (0, 255, 125), -1)
-    cv.imshow(pointWindowName, dstMat)
+            cv.circle(dst, far, 5, (0, 255, 125), -1)
+    cv.imshow(pointWindowName, dst)
 
 
 def run_RPLidar(port, baudrate, dat, config):

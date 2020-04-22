@@ -1,13 +1,10 @@
 import csv
-import threading
-import matplotlib.pyplot as plt
-import math
+
 import time
-import numpy as np
-import cv2 as cv
-import json
 import signal
 import os
+import numpy as np
+import cv2 as cv
 
 from rplidar import RPLidar, RPLidarException, MAX_MOTOR_PWM
 from setting import RPLIDAR_PORT, BAUDRATE
@@ -117,7 +114,7 @@ def run_RPLidar(port, baudrate, dat, config):
                         break
                 print('finished writing')
                 print('written', os.stat(path).st_size, 'bytes')
-            
+
             srcMat = np.zeros((WIDTH, HEIGHT, 3), dtype="uint8")
             matPoints = list(map(mapPointToMat, points))
             for center in matPoints:
