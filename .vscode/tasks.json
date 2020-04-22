@@ -40,6 +40,14 @@
             "presentation": {
                 "clear": true
             }
+        },
+        {
+            "label": "Python: lint",
+            "type": "shell",
+            "command": "autopep8 --in-place --recursive -v -j 2 --aggressive module/",
+            "presentation": {
+                "clear": true
+            }
         }
     ]
 }

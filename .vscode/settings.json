@@ -1,5 +1,8 @@
 {
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
+    "python.linting.pylintArgs": [
+        "--disable=C0114,C0115,C0116"
+    ],
     "python.formatting.provider": "yapf"
 }
