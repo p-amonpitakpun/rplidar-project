@@ -65,13 +65,14 @@ def grid_mapping(grid_map, points, gx, gy):
                 grid_map[h - y - 1, x, 2] += 0.7
     return grid_map
 
+
 def filter_background(points, grid_map, gx, gy, threshold):
     h, w, _ = grid_map.shape
     x0, y0 = w // 2, h // 2
     clusters = []
     cluster = []
     for point in points:
-        x= int(np.floor(point[0] / gx) + x0)
+        x = int(np.floor(point[0] / gx) + x0)
         y = int(np.floor(point[1] / gy) + y0)
         if x < w and y < h:
             green = grid_map[h - y - 1, x, 1]
@@ -90,6 +91,8 @@ def filter_background(points, grid_map, gx, gy, threshold):
 
 
 if __name__ == '__main__':
+
+    ## BACKGROUND ################################################################
     ROOM_FIELD_NAMES, ROOM_POINT_STREAM = load_to_dicts('data/stream/room.csv')
     ROOM_FRAMES = get_frames(ROOM_POINT_STREAM, ROOM_FIELD_NAMES)
     print('length of stream\t', len(ROOM_POINT_STREAM))
@@ -118,27 +121,31 @@ if __name__ == '__main__':
     GMAP = cv.resize(GMAP, (1000, 1000))
     cv.imshow('grid map', GMAP)
 
+    ## WALKING #################################################################
     WALKING_FIELD_NAMES, WALKING_POINT_STREAM = load_to_dicts(
         'data/stream/straight.csv')
     WALKING_FRAMES = get_frames(WALKING_POINT_STREAM, WALKING_FIELD_NAMES)
     print('length of stream\t', len(WALKING_POINT_STREAM))
     print('total number of frames\t', len(WALKING_FRAMES))
-
-    # print(np.array([len(frame) for frame in WALKING_FRAMES]))
-
-    # print(ROOM_POINTS)
-    for points in WALKING_FRAMES[: 2]:
+    for points in WALKING_FRAMES[:2]:
         clusters = filter_background(points, GMAP, gx, gy, -20)
-        # print("number of clusters ", len(points))
-        # print(np.array([len(cluster) for cluster in clusters]))
-
+        clusters = sorted(clusters, key=len, reverse=True)
         WALKING_POINTS = np.array(points)
         plt.scatter(ROOM_POINTS[:, 0], ROOM_POINTS[:, 1], s=1, c='k')
         plt.scatter(WALKING_POINTS[:, 0], WALKING_POINTS[:, 1], s=1, c='r')
         for cluster in clusters:
             if len(cluster) > 10:
                 CLUSTER_POINTS = np.array(cluster)
-                plt.scatter(CLUSTER_POINTS[:, 0], CLUSTER_POINTS[:, 1], s=1, c='g')
+                plt.scatter(CLUSTER_POINTS[:, 0],
+                            CLUSTER_POINTS[:, 1],
+                            s=1,
+                            c='g')
+        if len(clusters) > 0:
+            LARGEST_CLUSTER = np.array(clusters[0])
+            plt.scatter(LARGEST_CLUSTER[:, 0],
+                        LARGEST_CLUSTER[:, 1],
+                        s=1,
+                        c='b')
         plt.show()
 
     cv.waitKey(0)
