@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from module.data import load_to_dicts
 from module.rplidarx import cvtPolarToCartesian
+from module.pointprocess import find_distant
+from module.gridmap import create_occupancy_grid_map
 
 
 def get_frames(point_stream, field_names):
@@ -25,69 +27,35 @@ def get_frames(point_stream, field_names):
     return point_frames
 
 
-def get_grid_map(gx, gy, frame_size):
-    frame_width, frame_height = frame_size
-    map_size = (frame_height // gy + 1, frame_width // gx + 1, 3)
-    grid_map = np.zeros(map_size, dtype='float32')
-    return grid_map
-
-
-def get_path_from_origin(point, gx, gy, x, y, x0, y0):
-    slope = point[1] / point[0]
-    path = []
-    sx = int(np.sign(x))
-    if x != 0 and x != -1:
-        for xi in range(min(x, 0), max(x, 0) + 1):
-            y1, y2 = slope * xi * gx, slope * (xi + sx) * gx
-            yi1 = int(np.floor(y1 / gy))
-            yi2 = int(np.floor(y2 / gy))
-            for yi in range(min(yi1, yi2), max(yi1, yi2) + 1):
-                if xi != x and yi != y:
-                    path.append([xi + x0, yi + y0])
-    else:
-        for yi in range(min(y, 0), max(y, 0) + 1):
-            if yi != y:
-                path.append([x + x0, y + y0])
-    return path
-
-
-def grid_mapping(grid_map, points, gx, gy):
+def filter_background(points, grid_map, gx, gy, threshold, dist_threshold):
     h, w, _ = grid_map.shape
     x0, y0 = w // 2, h // 2
-    for point in points:
-        x, y = int(np.floor(point[0] / gx) +
-                   x0), int(np.floor(point[1] / gy) + y0)
-        path = get_path_from_origin(point, gx, gy, x - x0, y - y0, x0, y0)
-        if x < w and y < h:
-            grid_map[h - y - 1, x, 1] += 0.9
-        for x, y in path:
-            if 0 <= x < w and 0 <= y < h:
-                grid_map[h - y - 1, x, 2] += 0.7
-    return grid_map
-
-
-def filter_background(points, grid_map, gx, gy, threshold):
-    h, w, _ = grid_map.shape
-    x0, y0 = w // 2, h // 2
+    background = []
     clusters = []
     cluster = []
+    prev_point = None
     for point in points:
         x = int(np.floor(point[0] / gx) + x0)
         y = int(np.floor(point[1] / gy) + y0)
         if x < w and y < h:
             green = grid_map[h - y - 1, x, 1]
             red = grid_map[h - y - 1, x, 2]
-
-            # print(green - red)
-
-            if green - red > threshold and len(cluster) > 0:
-                clusters.append(cluster)
-                cluster = []
+            if green - red > threshold:
+                background.append(point)
+                if len(cluster) > 0:
+                    clusters.append(cluster)
+                    cluster = []
             else:
+                # if prev_point is not None:
+                #     if find_distant(point, prev_point) > dist_threshold and len(cluster) > 0:
+                #         # print(find_distant(point, prev_point))
+                #         clusters.append(cluster)
+                #         cluster = []
                 cluster.append(point)
+            prev_point = points
     if len(cluster) > 0:
         clusters.append(cluster)
-    return clusters
+    return clusters, background
 
 
 if __name__ == '__main__':
@@ -109,17 +77,19 @@ if __name__ == '__main__':
             ROOM_POINTS.append(point)
     ROOM_POINTS = np.array(ROOM_POINTS)
 
-    gx = 100
-    gy = 100
-    GMAP = get_grid_map(gx, gy, (10000, 10000))
-    N_FRAME = 10
+    gx = 200
+    gy = 200
+    # GMAP = create_grid_map(gx, gy, (10000, 10000))
+    N_FRAME = 100
+    POINTS_FOR_GRID_MAP = []
     for points in ROOM_FRAMES[0:N_FRAME]:
-        GMAP = grid_mapping(GMAP, points, gx, gy)
-    GMAP = GMAP / (N_FRAME if N_FRAME > 0 else len(ROOM_FRAMES))
+        for point in points:
+            POINTS_FOR_GRID_MAP.append(point)
+    GMAP = create_occupancy_grid_map(POINTS_FOR_GRID_MAP, 10000, 10000,
+                                     (gx, gy))
     print('shape\t\t\t', GMAP.shape)
     print('number of frames\t', N_FRAME if N_FRAME > 0 else len(ROOM_FRAMES))
-    GMAP = cv.resize(GMAP, (1000, 1000))
-    cv.imshow('grid map', GMAP)
+    cv.imshow('grid map', cv.resize(GMAP, (1000, 1000)))
 
     ## WALKING #################################################################
     WALKING_FIELD_NAMES, WALKING_POINT_STREAM = load_to_dicts(
@@ -127,25 +97,19 @@ if __name__ == '__main__':
     WALKING_FRAMES = get_frames(WALKING_POINT_STREAM, WALKING_FIELD_NAMES)
     print('length of stream\t', len(WALKING_POINT_STREAM))
     print('total number of frames\t', len(WALKING_FRAMES))
-    for points in WALKING_FRAMES[:2]:
-        clusters = filter_background(points, GMAP, gx, gy, -20)
-        clusters = sorted(clusters, key=len, reverse=True)
-        WALKING_POINTS = np.array(points)
-        plt.scatter(ROOM_POINTS[:, 0], ROOM_POINTS[:, 1], s=1, c='k')
-        plt.scatter(WALKING_POINTS[:, 0], WALKING_POINTS[:, 1], s=1, c='r')
+    for points in WALKING_FRAMES[1:11]:
+        clusters, room_points = filter_background(points, GMAP, gx, gy, 0,
+                                                  37000)
+
+        background_points = np.array(room_points)
+        plt.scatter(background_points[:, 0],
+                    background_points[:, 1],
+                    s=1,
+                    c='grey')
         for cluster in clusters:
-            if len(cluster) > 10:
-                CLUSTER_POINTS = np.array(cluster)
-                plt.scatter(CLUSTER_POINTS[:, 0],
-                            CLUSTER_POINTS[:, 1],
-                            s=1,
-                            c='g')
-        if len(clusters) > 0:
-            LARGEST_CLUSTER = np.array(clusters[0])
-            plt.scatter(LARGEST_CLUSTER[:, 0],
-                        LARGEST_CLUSTER[:, 1],
-                        s=1,
-                        c='b')
+            points = np.array(cluster)
+            plt.scatter(points[:, 0], points[:, 1], s=1)
+
         plt.show()
 
     cv.waitKey(0)
