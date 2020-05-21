@@ -71,19 +71,20 @@ def resampling(states, n_sample, speed):
         l_vector = (x + v_x_i, y + v_y_i, alpha - np.pi / 2, w, number)
         h_vector = (x + v_x, y + v_y, alpha + np.pi / 2, w, number),
         resampled = np.random.uniform(low=l_vector,
-                                       high=h_vector,
-                                       size=(int(n_sample * w), 5))
+                                      high=h_vector,
+                                      size=(int(n_sample * w), 5))
         for new_state in resampled:
             new_states.append(new_state)
-        
+
         weight.append(w)
         max_number = max(number, max_number)
 
     m_sample = int(n_sample // 4)
     random_states = np.random.uniform(low=(-3000, -3000, 0, 1, 0),
-                                   high=(3000, 3000, np.pi * 2, 0.001, 0),
-                                   size=(m_sample, 5))
-    random_states[:, 4] = range(int(max_number + 1), int(max_number + m_sample + 1))
+                                      high=(3000, 3000, np.pi * 2, 0.001, 0),
+                                      size=(m_sample, 5))
+    random_states[:, 4] = range(int(max_number + 1),
+                                int(max_number + m_sample + 1))
     for state in random_states:
         new_states.append(state)
     new_states = np.array(new_states)
