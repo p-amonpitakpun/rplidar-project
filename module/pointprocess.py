@@ -29,7 +29,7 @@ def filter_polar_points(scan_points):
     return new_points
 
 
-def convert_polar_to_cartesian(polar_point):
+def cvt_polar_to_cartesian(polar_point):
     degree, distance = polar_point
     rad = np.radians(degree)
     return (distance * np.cos(rad), distance * np.sin(rad))
@@ -40,10 +40,10 @@ def map_point_to_mat(point):
             int(np.round(point[1] * RATIO_Y) + Y_CENTER))
 
 
-def find_distant(point1, point2):
-    point1 = np.array(point1)
-    point2 = np.array(point2)
-    return np.sqrt(np.sum(np.power(point1 - point2, 2)))
+def euclidian_distant(point1, point2):
+
+    assert len(point1) == len(point2)
+    return np.sqrt(sum([(x1 - x2)**2 for x1, x2 in zip(point1, point2)]))
 
 
 def detect_convex(cpoints, prvCnt):
