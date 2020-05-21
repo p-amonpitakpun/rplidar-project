@@ -108,8 +108,8 @@ def run_RPLidar(port, baudrate, dat, config):
 
                 try:
                     process(cPoints)
-                    with open('./out/scan.json', 'w') as scanfile:
-                        json.dump(cPoints, scanfile)
+                    # with open('./out/scan.json', 'w') as scanfile:
+                    #     json.dump(cPoints, scanfile)
                 except Exception as e:
                     print(e)
                     break
