@@ -1,9 +1,7 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 from module.data import load_to_dicts
 from module.rplidarx import cvtPolarToCartesian
-from module.pointprocess import euclidian_distant
 from module.gridmap import create_occupancy_grid_map
 from module.ellipse import rotate_matrix, ellipse
 
