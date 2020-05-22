@@ -100,7 +100,15 @@ def thread_func():
                 cv2.circle(img, (p_x, p_y), 15, (125, 125, 50), -1)
             prev_points = points.copy()[-200:]
             cv2.imshow(WINDOW_NAME, cv2.resize(img, (500, 500)))
-            cv2.imshow(WINDOW_NAME2, cv2.resize(grid_map, (500, 500)))
+            
+            h, w, _ = grid_map.shape
+            x0, y0 = w // 2, h // 2
+            img_map = grid_map.copy()
+            point = np.matmul(R, np.array([0, 0])) + T
+            x = int(np.floor(point[0] / gx) + x0)
+            y = int(np.floor(point[1] / gy) + y0)
+            cv2.circle(img_map, (x, y), 5, (225, 150, ), -1)
+            cv2.imshow(WINDOW_NAME2, cv2.resize(img_map, (500, 500)))
 
         if cv2.waitKey(2) == 27:
             event.set()
