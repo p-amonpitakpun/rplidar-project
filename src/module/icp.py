@@ -61,11 +61,11 @@ def icp(ref, target, N_iter=10):
                 (X[:] - np.matmul(r, P[:].T).T - t)**2, axis=1))) / n
 
         if prev_err is None or (prev_err is not None and prev_err > err):
-            print('#', i, '\terr =', err)
+            # print('#', i, '\terr =', err)
             prev_err = err
             P = np.matmul(r, P[:].T).T + t
             R = np.matmul(r, R)
-            T = T + t
+            T = np.matmul(r, T) + t
     return R, T
 
 
@@ -87,7 +87,7 @@ def tr_icp(ref, target, N=-1, N_iter=100):
                        key=lambda x: euclidian_distant(x[0], x[1]))[:N]
         s_d = sum([euclidian_distant(p, x)**2 for p, x in pairs])
 
-        print('S_LTS =', S, '\tS\'_LTS =', s_d)
+        # print('S_LTS =', S, '\tS\'_LTS =', s_d)
         if s_d < S:
             S = s_d
         else:
@@ -106,7 +106,7 @@ def tr_icp(ref, target, N=-1, N_iter=100):
 
         P = np.matmul(r, P.T).T + t
         R = np.matmul(r, R)
-        T = T + t
+        T = np.matmul(r, T) + t
 
-        print('#', end=' ')
+        # print('#', end=' ')
     return R, T
