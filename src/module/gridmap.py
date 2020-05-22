@@ -35,10 +35,10 @@ def grid_mapping(grid_map, points, g_x, g_y):
                    x0), int(np.floor(point[1] / g_y) + y0)
         path = get_path_from_origin(point, g_x, g_y, x - x0, y - y0, x0, y0)
         if x < w and y < h:
-            grid_map[h - y - 1, x, 1] += 1
+            grid_map[y, x, 1] += 1
         for x, y in path:
             if 0 <= x < w and 0 <= y < h:
-                grid_map[h - y - 1, x, 2] += 1
+                grid_map[y, x, 2] += 1
     return grid_map
 
 
