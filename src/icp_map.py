@@ -41,7 +41,7 @@ def thread_func():
 
     cv2.namedWindow(WINDOW_NAME)
     prev_points = np.array([])
-    grid_map = create_grid_map(250, 250)
+    grid_map = create_grid_map(500, 500)
     
     R = np.eye(2)
     T = np.array([0, 0])
@@ -53,7 +53,8 @@ def thread_func():
     while True:
         if new_scan:
             img = np.zeros((WIDTH, HEIGHT, 3), dtype="uint8")
-            polar_points = filter_polar_points(scan_output)
+            polar_points = np.array(filter_polar_points(scan_output))
+            # polar_points = polar_points[polar_points[:, 0] < 180]
             new_scan = False
             points = np.array(
                 [cvt_polar_to_cartesian(point) for point in polar_points]
