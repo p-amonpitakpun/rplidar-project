@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from sklearn.cluster import MeanShift
+# from sklearn.cluster import MeanShift
 from module.data import load_to_dicts
 from module.rplidarx import cvtPolarToCartesian
 from module.gridmap import create_occupancy_grid_map
@@ -74,7 +74,7 @@ def check(point_a, point_b):
 if __name__ == '__main__':
 
     room_path = 'data/nut/room.csv'
-    walking_path = 'data/nut/straight.csv'
+    walking_path = 'data/nut/behind_obj.csv'
 
     ## BACKGROUND ################################################################
     ROOM_FIELD_NAMES, ROOM_POINT_STREAM = load_to_dicts(room_path)
@@ -110,6 +110,27 @@ if __name__ == '__main__':
     ## WALKING #################################################################
     WALKING_FIELD_NAMES, WALKING_POINT_STREAM = load_to_dicts(walking_path)
     WALKING_FRAMES = get_frames(WALKING_POINT_STREAM, WALKING_FIELD_NAMES)[1:]
+
+    # temp = []
+    # frame_list = []
+    # n_list = 2
+    # for frame in WALKING_FRAMES:
+    #     if len(frame_list) < n_list:
+    #         frame_list.append(frame)
+    #     else:
+    #         new_frame = []
+    #         for f in frame_list:
+    #             new_frame += f
+    #         temp.append(new_frame)
+    #         frame_list = [frame]
+    # if len(frame_list) > 0:
+    #     new_frame = []
+    #     for f in frame_list:
+    #         new_frame += f
+    #     temp.append(new_frame)
+
+    # WALKING_FRAMES = np.array(temp)
+
     print('length of stream\t', len(WALKING_POINT_STREAM))
     print('total number of frames\t', len(WALKING_FRAMES))
 
@@ -126,10 +147,9 @@ if __name__ == '__main__':
 
     n_sample = 200
 
-    states = np.random.uniform(low=(-3000, -3000, 0, 1, 0),
-                               high=(3000, 3000, np.pi * 2, 1, 0),
-                               size=(n_sample, 5))
-    states[:, 4] = range(n_sample)
+    states = np.random.uniform(low=(-3000, -3000, 0, 1),
+                               high=(3000, 3000, np.pi * 2, 1),
+                               size=(n_sample, 4))
     state_color = dict()
 
     WIDTH = 1000
@@ -151,25 +171,36 @@ if __name__ == '__main__':
         if i > 0:
             print('before resampling\t', states.shape)
             new_states = []
-            for x, y, alpha, w, number in states:
+            for x, y, alpha, w in states:
                 v_x, v_y = np.matmul(rotate_matrix(alpha), [0, speed])
                 if v_x > 0:
-                    v_x_i = -v_x / 2
+                    # v_x_i = -v_x / 2
+                    v_x_i = 0
                 else:
                     v_x_i = v_x
-                    v_x = -v_x / 2
+                    # v_x = -v_x / 2
+                    v_x = 0
                 if v_y > 0:
-                    v_y_i = -v_y / 2
+                    # v_y_i = -v_y / 2
+                    v_y_i = 0
                 else:
                     v_y_i = v_y
-                    v_y = -v_y / 2
-                l_vector = (x + v_x_i, y + v_y_i, alpha - np.pi / 2, w, number)
-                h_vector = (x + v_x, y + v_y, alpha + np.pi / 2, w, number),
+                    # v_y = -v_y / 2
+                    v_y = 0
+                l_vector = (x + v_x_i, y + v_y_i, alpha - np.pi / 2, 1)
+                h_vector = (x + v_x, y + v_y, alpha + np.pi / 2, 1),
                 resampling = np.random.uniform(low=l_vector,
                                                high=h_vector,
-                                               size=(int(n_sample * w), 5))
+                                               size=(int(n_sample * w), 4))
                 for new_state in resampling:
                     new_states.append(new_state)
+
+            rand_states = np.random.uniform(low=(-3000, -3000, 0, 1),
+                                            high=(3000, 3000, np.pi * 2, 1),
+                                            size=(n_sample, 4))
+            for new_state in rand_states:
+                new_states.append(new_state)
+
             states = np.array(new_states)
             print('resampled ', states.shape)
 
@@ -179,7 +210,7 @@ if __name__ == '__main__':
                 sum([
                     w * g_fx(ellipse(a_axis, b_axis, x_0, y_0, alpha)(x, y)) *
                     check((x, y), (x_0, y_0)) for x, y in measures
-                ]) for x_0, y_0, alpha, w, _ in states
+                ]) for x_0, y_0, alpha, w in states
             ])
         else:
             weight = np.ones(len(states))
@@ -209,8 +240,8 @@ if __name__ == '__main__':
             cv2.circle(img, (p_x, p_y), 1, (125, 125, 0), -1)
 
         clusters = DisjointSet(list(range(len(states))))
-        for i, s1 in enumerate(states[:, : 3]):
-            for j, s2 in enumerate(states[i + 1:, : 3]):
+        for i, s1 in enumerate(states[:, :3]):
+            for j, s2 in enumerate(states[i + 1:, :3]):
                 x1, y1, _ = s1
                 x2, y2, _ = s2
                 dist = euclidian_distant([x1, y1], [x2, y2])
@@ -222,8 +253,10 @@ if __name__ == '__main__':
         min_cluster_state = 30
         for cluster_states in clusters.get():
             if len(cluster_states) >= min_cluster_state:
-                cluster = np.array([states[i, : 4] for i in cluster_states])
-                x_c, y_c, alpha_c = np.average(cluster[:, : 3], axis=0, weights=cluster[:, 3])
+                cluster = np.array([states[i, :4] for i in cluster_states])
+                x_c, y_c, alpha_c = np.average(cluster[:, :3],
+                                               axis=0,
+                                               weights=cluster[:, 3])
                 p_x = int(np.round(x_c * RATIO_X) + X_CENTER)
                 p_y = int(np.round(y_c * RATIO_Y) + Y_CENTER)
                 cv2.circle(img, (p_x, p_y), 1, color, -1)
@@ -232,11 +265,11 @@ if __name__ == '__main__':
                             alpha_c * 180 / np.pi, 0, 360, color, 1)
 
                 v_x, v_y = np.matmul(rotate_matrix(alpha_c),
-                                    [0, speed]) + [x_c, y_c]
+                                     [0, speed]) + [x_c, y_c]
                 p_x2 = int(np.round(v_x * RATIO_X) + X_CENTER)
                 p_y2 = int(np.round(v_y * RATIO_Y) + Y_CENTER)
                 cv2.arrowedLine(img, (p_x, p_y), (p_x2, p_y2), color, 1)
-        
+
         # n_state = -1
         # clusters = dict()
 
