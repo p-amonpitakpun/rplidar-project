@@ -1,9 +1,12 @@
 import numpy as np
 import cv2
+from sklearn.cluster import MeanShift
 from module.data import load_to_dicts
 from module.rplidarx import cvtPolarToCartesian
 from module.gridmap import create_occupancy_grid_map
 from module.ellipse import rotate_matrix, ellipse
+from module.disjoint_set import DisjointSet
+from module.pointprocess import euclidian_distant
 
 
 def get_frames(point_stream, field_names):
@@ -90,10 +93,10 @@ if __name__ == '__main__':
             ROOM_POINTS.append(point)
     ROOM_POINTS = np.array(ROOM_POINTS)
 
-    gx = 200
-    gy = 200
+    gx = 50
+    gy = 50
     # GMAP = create_grid_map(gx, gy, (10000, 10000))
-    N_FRAME = 500
+    N_FRAME = 100
     POINTS_FOR_GRID_MAP = []
     for points in ROOM_FRAMES[0:N_FRAME]:
         for point in points:
@@ -102,7 +105,7 @@ if __name__ == '__main__':
                                      (gx, gy))
     print('shape\t\t\t', GMAP.shape)
     print('number of frames\t', N_FRAME if N_FRAME > 0 else len(ROOM_FRAMES))
-    # cv.imshow('grid map', cv.resize(GMAP, (1000, 1000)))
+    cv2.imshow('grid map', cv2.resize(GMAP, (500, 500)))
 
     ## WALKING #################################################################
     WALKING_FIELD_NAMES, WALKING_POINT_STREAM = load_to_dicts(walking_path)
@@ -119,9 +122,9 @@ if __name__ == '__main__':
 
     total_time = 30  # s
     N_WALKING_FRAME = 100
-    speed = 700 * total_time / N_WALKING_FRAME
+    speed = 1400 * total_time / N_WALKING_FRAME
 
-    n_sample = 1000
+    n_sample = 200
 
     states = np.random.uniform(low=(-3000, -3000, 0, 1, 0),
                                high=(3000, 3000, np.pi * 2, 1, 0),
@@ -205,39 +208,71 @@ if __name__ == '__main__':
             p_y = int(np.round(point[1] * RATIO_Y) + Y_CENTER)
             cv2.circle(img, (p_x, p_y), 1, (125, 125, 0), -1)
 
-        n_state = 20
-        clusters = dict()
+        clusters = DisjointSet(list(range(len(states))))
+        for i, s1 in enumerate(states[:, : 3]):
+            for j, s2 in enumerate(states[i + 1:, : 3]):
+                x1, y1, _ = s1
+                x2, y2, _ = s2
+                dist = euclidian_distant([x1, y1], [x2, y2])
+                if dist <= 1000:
+                    clusters.union(i, j)
 
-        for x, y, alpha, _, number in states[:n_state]:
-            state_number = int(number)
-            if state_color.get(state_number) is None:
-                b, g, r = np.random.randint((50, 50, 50), (200, 200, 200))
-                color = (int(b), int(g), int(r))
-                state_color[state_number] = color
+        # print('cluster =\t', len(clusters.get()))
+        color = (125, 50, 125)
+        min_cluster_state = 30
+        for cluster_states in clusters.get():
+            if len(cluster_states) >= min_cluster_state:
+                cluster = np.array([states[i, : 4] for i in cluster_states])
+                x_c, y_c, alpha_c = np.average(cluster[:, : 3], axis=0, weights=cluster[:, 3])
+                p_x = int(np.round(x_c * RATIO_X) + X_CENTER)
+                p_y = int(np.round(y_c * RATIO_Y) + Y_CENTER)
+                cv2.circle(img, (p_x, p_y), 1, color, -1)
+                cv2.ellipse(img, (p_x, p_y),
+                            (int(a_axis * RATIO_X), int(b_axis * RATIO_Y)),
+                            alpha_c * 180 / np.pi, 0, 360, color, 1)
 
-            if clusters.get(state_number) is None:
-                clusters[state_number] = [[x, y, alpha]]
-            else:
-                clusters[state_number].append([x, y, alpha])
-        print('estimated number of clusters =\t', len(list(clusters.keys())))
-        for state_number in clusters:
-            cluster_states = np.array(clusters[state_number])
-            x_c, y_c, alpha_c = np.mean(cluster_states, axis=0)
-            p_x = int(np.round(x_c * RATIO_X) + X_CENTER)
-            p_y = int(np.round(y_c * RATIO_Y) + Y_CENTER)
-            cv2.circle(img, (p_x, p_y), 1, color, -1)
-            cv2.ellipse(img, (p_x, p_y),
-                        (int(a_axis * RATIO_X), int(b_axis * RATIO_Y)),
-                        alpha_c * 180 / np.pi, 0, 360, color, 1)
+                v_x, v_y = np.matmul(rotate_matrix(alpha_c),
+                                    [0, speed]) + [x_c, y_c]
+                p_x2 = int(np.round(v_x * RATIO_X) + X_CENTER)
+                p_y2 = int(np.round(v_y * RATIO_Y) + Y_CENTER)
+                cv2.arrowedLine(img, (p_x, p_y), (p_x2, p_y2), color, 1)
+        
+        # n_state = -1
+        # clusters = dict()
 
-            v_x, v_y = np.matmul(rotate_matrix(alpha_c),
-                                 [0, speed]) + [x_c, y_c]
-            p_x2 = int(np.round(v_x * RATIO_X) + X_CENTER)
-            p_y2 = int(np.round(v_y * RATIO_Y) + Y_CENTER)
-            cv2.arrowedLine(img, (p_x, p_y), (p_x2, p_y2), color, 1)
+        # labels = MeanShift().fit_predict(states[:, :2])
+
+        # state_dict = dict()
+        # for i_s, s in enumerate(states):
+        #     c_i = labels[i_s]
+        #     s_i = s[: 3]
+        #     if state_dict.get(c_i) is None:
+        #         state_dict[c_i] = [s_i]
+        #     else:
+        #         state_dict[c_i].append(s_i)
+
+        # pred_states = [np.mean(state_dict[i_d], axis=0) for i_d in state_dict]
+
+        # color = (125, 50, 125)
+        # for x_c, y_c, alpha_c in pred_states:
+        #     p_x = int(np.round(x_c * RATIO_X) + X_CENTER)
+        #     p_y = int(np.round(y_c * RATIO_Y) + Y_CENTER)
+        #     cv2.circle(img, (p_x, p_y), 1, color, -1)
+        #     cv2.ellipse(
+        #         img, (p_x, p_y),
+        #         (int(a_axis * RATIO_X), int(b_axis * RATIO_Y)),
+        #         alpha_c * 180 / np.pi, 0, 360, color, 1)
+
+        #     v_x, v_y = np.matmul(rotate_matrix(alpha_c),
+        #                             [0, speed]) + [x_c, y_c]
+        #     p_x2 = int(np.round(v_x * RATIO_X) + X_CENTER)
+        #     p_y2 = int(np.round(v_y * RATIO_Y) + Y_CENTER)
+        #     cv2.arrowedLine(img, (p_x, p_y), (p_x2, p_y2),
+        #                     color, 1)
 
         cv2.imshow(WINDOW_NAME, img)
-        cv2.waitKey(int(total_time / N_WALKING_FRAME * 1000))
+        if cv2.waitKey(int(total_time / N_WALKING_FRAME * 1000)) > -1:
+            break
 
         print()
         i += 1

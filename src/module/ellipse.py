@@ -108,7 +108,7 @@ def gaussian(mu, sig):
 def test_distant():
 
     # known attributes
-    x_0, y_0 = 100, 100
+    x_0, y_0 = 0, 0
     phi = np.pi / 6 * 0
     a = 200
     b = 100
@@ -119,22 +119,25 @@ def test_distant():
     e = ellipse(a, b, x_0, y_0, phi)
     g = gaussian(1, 0.2)
 
-    X = np.random.uniform(low=[-400, -400], high=[400, 400], size=(2000, 2))
-    i = 1
-    for x, y in X:
-        r = e(x, y)
-        # print(i)
-        i += 1
-        # if y < 0.5 and x < 1:
-        # plt.scatter([x], [r], c=('b' if r <= 1 else 'r'), s=1, alpha=g(r))
-        ax.scatter([x], [y], s=1, c='b', alpha=g(r))
-    ax.set_xlim(-5000, 5000)
-    ax.set_ylim(-5000, 5000)
-    plt.show()
+    # X = np.random.uniform(low=[-400, -400], high=[400, 400], size=(2000, 2))
+    # i = 1
+    # for x, y in X:
+    #     r = e(x, y)
+    #     # print(i)
+    #     i += 1
+    #     # if y < 0.5 and x < 1:
+    #     # plt.scatter([x], [r], c=('b' if r <= 1 else 'r'), s=1, alpha=g(r))
+    #     ax.scatter([x], [y], s=1, c='b', alpha=g(r))
+    # ax.set_xlim(-5000, 5000)
+    # ax.set_ylim(-5000, 5000)
+    # plt.show()
 
     X = np.linspace(0, 1000, 1000)
     R = [g(e(x, 0)) for x in X]
     plt.plot(X, R, c='b')
+    plt.title('an Ellipse with major axis = 200')
+    plt.ylabel('weight')
+    plt.xlabel('distance from center along major axis')
     plt.show()
 
 
