@@ -5,7 +5,6 @@ import cv2
 import json
 
 from rplidar import RPLidar, RPLidarException, MAX_MOTOR_PWM
-from sklearn.cluster import MeanShift
 from setting import RPLIDAR_PORT, BAUDRATE
 
 from module.pointprocess import filter_polar_points, cvt_polar_to_cartesian
